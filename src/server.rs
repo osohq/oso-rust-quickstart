@@ -18,18 +18,28 @@ impl<'a, 'r> FromRequest<'a, 'r> for User {
         if let Some(user) = request.headers().get_one("user") {
             request::Outcome::Success(User(user.to_string()))
         } else {
-            request::Outcome::Failure((Status::Unauthorized, "Unknown User".to_owned()))
+            request::Outcome::Failure((Status::Forbidden, "Unknown User".to_owned()))
         }
     }
+}
+
+#[catch(403)]
+fn not_authorized(_: &Request) -> String {
+    "Not Authorized!\n".to_string()
+}
+
+#[catch(404)]
+fn not_found(_: &Request) -> String {
+    "Not Found!\n".to_string()
 }
 
 #[get("/expenses/<id>")]
 fn get_expense(oso: State<OsoState>, user: User, id: usize) -> Result<Option<String>, Status> {
     if let Some(expense) = DB.get(&id) {
         if oso.is_allowed(user.0, "GET", expense.clone()) {
-            Ok(Some(format!("{}", expense)))
+            Ok(Some(format!("{}\n", expense)))
         } else {
-            Err(Status::Unauthorized)
+            Err(Status::Forbidden)
         }
     } else {
         Ok(None)
@@ -63,5 +73,6 @@ pub fn run() {
     rocket::ignite()
         .mount("/", routes![get_expense])
         .manage(oso_state)
+        .register(catchers![not_authorized, not_found])
         .launch();
 }
