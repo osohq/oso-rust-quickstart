@@ -6,7 +6,7 @@ use rocket::request::{self, FromRequest, Request, State};
 
 use oso::{Oso, PolarClass};
 
-use crate::expenses::{Expense, EXPENSES};
+use crate::expenses::{Expense, DB};
 
 #[derive(Debug)]
 struct User(String);
@@ -25,7 +25,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for User {
 
 #[get("/expenses/<id>")]
 fn get_expense(oso: State<OsoState>, user: User, id: usize) -> Result<Option<String>, Status> {
-    if let Some(expense) = EXPENSES.get(id) {
+    if let Some(expense) = DB.get(&id) {
         if oso.is_allowed(user.0, "GET", expense.clone()) {
             Ok(Some(format!("{}", expense)))
         } else {

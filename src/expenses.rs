@@ -1,15 +1,18 @@
 use lazy_static::lazy_static;
 use std::fmt;
 use std::string::ToString;
+use std::collections::HashMap;
 
 use oso::*;
 
 lazy_static! {
-    pub static ref EXPENSES: [Expense; 3] = [
-        Expense::new(500, "coffee", "alice@example.com"),
-        Expense::new(5000, "software", "alice@example.com"),
-        Expense::new(50000, "flight", "bhavik@example.com"),
-    ];
+    pub static ref DB: HashMap<usize, Expense> = {
+        let mut db = HashMap::with_capacity(3);
+        db.insert(1, Expense::new(500, "coffee", "alice@example.com"));
+        db.insert(2, Expense::new(5000, "software", "alice@example.com"));
+        db.insert(3, Expense::new(50000, "flight", "bhavik@example.com"));
+        db
+    };
 }
 
 #[derive(PolarClass, Debug, Clone)]
