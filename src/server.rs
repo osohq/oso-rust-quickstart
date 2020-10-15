@@ -59,13 +59,17 @@ impl OsoState {
     }
 }
 
-pub fn run() {
+pub fn oso() -> Oso {
     let mut oso = Oso::new();
 
     oso.register_class(Expense::get_polar_class()).unwrap();
 
     oso.load_file("expenses.polar").unwrap();
 
+    oso
+}
+
+pub fn rocket(oso: Oso) -> rocket::Rocket {
     let oso_state = OsoState {
         oso: Arc::new(Mutex::new(oso)),
     };
@@ -74,5 +78,56 @@ pub fn run() {
         .mount("/", routes![get_expense])
         .manage(oso_state)
         .register(catchers![not_authorized, not_found])
-        .launch();
+}
+
+pub fn run() {
+    rocket(oso()).launch();
+}
+
+mod test {
+    use super::{oso, rocket};
+    use rocket::http::{Header, Status};
+    use rocket::local::Client;
+
+    #[test]
+    fn get_expense_no_rules() {
+        let client = Client::new(rocket(oso())).expect("valid rocket instance");
+        let response = client.get("/expenses/1").dispatch();
+        assert_eq!(response.status(), Status::Forbidden);
+    }
+
+    #[test]
+    fn get_expense_first_rule() {
+        let mut oso = oso();
+        oso.load_str(
+            "allow(actor: String, \"GET\", _expense: Expense) if actor.ends_with(\"@example.com\");",
+        )
+        .unwrap();
+        let client = Client::new(rocket(oso)).expect("valid rocket instance");
+        let mut request = client.get("/expenses/1");
+        request.add_header(Header::new("user", "alice@example.com"));
+        let ok_response = request.dispatch();
+        assert_eq!(ok_response.status(), Status::Ok);
+        let unauthorized_response = client.get("/expenses/1").dispatch();
+        assert_eq!(unauthorized_response.status(), Status::Forbidden);
+    }
+
+    #[test]
+    fn get_expense_second_rule() {
+        let mut oso = oso();
+        oso.load_str(
+            "allow(actor: String, \"GET\", expense: Expense) if expense.submitted_by = actor;",
+        )
+        .unwrap();
+        let client = Client::new(rocket(oso)).expect("valid rocket instance");
+        let mut request = client.get("/expenses/1");
+        request.add_header(Header::new("user", "alice@example.com"));
+        let ok_response = request.dispatch();
+        assert_eq!(ok_response.status(), Status::Ok);
+
+        let mut bad_request = client.get("/expenses/3");
+        bad_request.add_header(Header::new("user", "alice@example.com"));
+        let unauthorized_response = bad_request.dispatch();
+        assert_eq!(unauthorized_response.status(), Status::Forbidden);
+    }
 }
