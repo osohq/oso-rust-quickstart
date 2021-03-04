@@ -62,9 +62,15 @@ impl OsoState {
 pub fn oso() -> Oso {
     let mut oso = Oso::new();
 
-    oso.register_class(Expense::get_polar_class()).unwrap();
+    if let Err(err) = oso.register_class(Expense::get_polar_class()) {
+        eprintln!("Error registering `Expense` class: {}", err);
+        std::process::exit(1);
+    }
 
-    oso.load_file("expenses.polar").unwrap();
+    if let Err(err) = oso.load_file("expenses.polar") {
+        eprintln!("Error loading `expenses.polar` file: {}", err);
+        std::process::exit(1);
+    }
 
     oso
 }
