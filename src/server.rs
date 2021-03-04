@@ -84,6 +84,7 @@ pub fn run() {
     rocket(oso()).launch();
 }
 
+#[cfg(test)]
 mod test {
     use super::{oso, rocket};
     use rocket::http::{Header, Status};
