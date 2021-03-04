@@ -1,4 +1,4 @@
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use rocket::get;
 use rocket::http::Status;
@@ -47,13 +47,12 @@ fn get_expense(oso: State<OsoState>, user: User, id: usize) -> Result<Option<Str
 }
 
 struct OsoState {
-    oso: Arc<Mutex<Oso>>,
+    oso: Arc<Oso>,
 }
 
 impl OsoState {
     pub fn is_allowed(&self, actor: String, action: &str, resource: Expense) -> bool {
-        let mut guard = self.oso.lock().unwrap();
-        guard
+        self.oso
             .is_allowed(actor, action.to_string(), resource)
             .unwrap()
     }
@@ -71,7 +70,7 @@ pub fn oso() -> Oso {
 
 pub fn rocket(oso: Oso) -> rocket::Rocket {
     let oso_state = OsoState {
-        oso: Arc::new(Mutex::new(oso)),
+        oso: Arc::new(oso),
     };
 
     rocket::ignite()
@@ -98,7 +97,7 @@ mod test {
 
     #[test]
     fn get_expense_first_rule() {
-        let mut oso = oso();
+        let oso = oso();
         oso.load_str(
             "allow(actor: String, \"GET\", _expense: Expense) if actor.ends_with(\"@example.com\");",
         )
@@ -114,7 +113,7 @@ mod test {
 
     #[test]
     fn get_expense_second_rule() {
-        let mut oso = oso();
+        let oso = oso();
         oso.load_str(
             "allow(actor: String, \"GET\", expense: Expense) if expense.submitted_by = actor;",
         )
