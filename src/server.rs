@@ -4,7 +4,11 @@ use rocket::get;
 use rocket::http::Status;
 use rocket::request::{self, FromRequest, Request, State};
 
-use oso::{Oso, PolarClass};
+use oso::{
+    Oso, 
+    OsoError,
+    PolarClass
+};
 
 use crate::expenses::{Expense, DB};
 
@@ -59,14 +63,14 @@ impl OsoState {
     }
 }
 
-pub fn oso() -> Oso {
+pub fn oso() -> Result<Oso, OsoError> {
     let mut oso = Oso::new();
+    
+    oso.register_class(Expense::get_polar_class())?;
 
-    oso.register_class(Expense::get_polar_class()).unwrap();
+    oso.load_file("expenses.polar")?;
 
-    oso.load_file("expenses.polar").unwrap();
-
-    oso
+    Ok(oso)
 }
 
 pub fn rocket(oso: Oso) -> rocket::Rocket {
@@ -80,10 +84,13 @@ pub fn rocket(oso: Oso) -> rocket::Rocket {
         .register(catchers![not_authorized, not_found])
 }
 
-pub fn run() {
-    rocket(oso()).launch();
+pub fn run() -> Result<(), OsoError> {
+    rocket(oso()?).launch();
+
+    Ok(())
 }
 
+#[cfg(test)]
 mod test {
     use super::{oso, rocket};
     use rocket::http::{Header, Status};
@@ -91,14 +98,14 @@ mod test {
 
     #[test]
     fn get_expense_no_rules() {
-        let client = Client::new(rocket(oso())).expect("valid rocket instance");
+        let client = Client::new(rocket(oso().unwrap())).expect("valid rocket instance");
         let response = client.get("/expenses/1").dispatch();
         assert_eq!(response.status(), Status::Forbidden);
     }
 
     #[test]
     fn get_expense_first_rule() {
-        let mut oso = oso();
+        let mut oso = oso().unwrap();
         oso.load_str(
             "allow(actor: String, \"GET\", _expense: Expense) if actor.ends_with(\"@example.com\");",
         )
@@ -114,7 +121,7 @@ mod test {
 
     #[test]
     fn get_expense_second_rule() {
-        let mut oso = oso();
+        let mut oso = oso().unwrap();
         oso.load_str(
             "allow(actor: String, \"GET\", expense: Expense) if expense.submitted_by = actor;",
         )

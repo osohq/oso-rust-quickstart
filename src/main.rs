@@ -7,5 +7,8 @@ mod expenses;
 mod server;
 
 fn main() {
-    server::run();
+    if let Err(err) = server::run() {
+        eprintln!("Error: {}", err);
+        std::process::exit(1);
+    }
 }
