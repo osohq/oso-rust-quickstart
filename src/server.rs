@@ -4,7 +4,11 @@ use rocket::get;
 use rocket::http::Status;
 use rocket::request::{self, FromRequest, Request, State};
 
-use oso::{Oso, PolarClass};
+use oso::{
+    Oso, 
+    OsoError,
+    PolarClass
+};
 
 use crate::expenses::{Expense, DB};
 
@@ -59,20 +63,14 @@ impl OsoState {
     }
 }
 
-pub fn oso() -> Oso {
+pub fn oso() -> Result<Oso, OsoError> {
     let mut oso = Oso::new();
+    
+    oso.register_class(Expense::get_polar_class())?;
 
-    if let Err(err) = oso.register_class(Expense::get_polar_class()) {
-        eprintln!("Error registering `Expense` class: {}", err);
-        std::process::exit(1);
-    }
+    oso.load_file("expenses.polar")?;
 
-    if let Err(err) = oso.load_file("expenses.polar") {
-        eprintln!("Error loading `expenses.polar` file: {}", err);
-        std::process::exit(1);
-    }
-
-    oso
+    Ok(oso)
 }
 
 pub fn rocket(oso: Oso) -> rocket::Rocket {
@@ -86,8 +84,10 @@ pub fn rocket(oso: Oso) -> rocket::Rocket {
         .register(catchers![not_authorized, not_found])
 }
 
-pub fn run() {
-    rocket(oso()).launch();
+pub fn run() -> Result<(), OsoError> {
+    rocket(oso()?).launch();
+
+    Ok(())
 }
 
 #[cfg(test)]
