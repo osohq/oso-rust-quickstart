@@ -98,14 +98,14 @@ mod test {
 
     #[test]
     fn get_expense_no_rules() {
-        let client = Client::new(rocket(oso())).expect("valid rocket instance");
+        let client = Client::new(rocket(oso().unwrap())).expect("valid rocket instance");
         let response = client.get("/expenses/1").dispatch();
         assert_eq!(response.status(), Status::Forbidden);
     }
 
     #[test]
     fn get_expense_first_rule() {
-        let mut oso = oso();
+        let mut oso = oso().unwrap();
         oso.load_str(
             "allow(actor: String, \"GET\", _expense: Expense) if actor.ends_with(\"@example.com\");",
         )
@@ -121,7 +121,7 @@ mod test {
 
     #[test]
     fn get_expense_second_rule() {
-        let mut oso = oso();
+        let mut oso = oso().unwrap();
         oso.load_str(
             "allow(actor: String, \"GET\", expense: Expense) if expense.submitted_by = actor;",
         )
