@@ -2,10 +2,11 @@ use std::sync::{Arc, Mutex};
 
 use rocket::get;
 use rocket::http::Status;
-use rocket::request::{self, FromRequest, Request, State};
+use rocket::request::{self, FromRequest, Request};
+use rocket::{State, Build, Rocket};
 
 use oso::{
-    Oso, 
+    Oso,
     OsoError,
     PolarClass
 };
@@ -15,10 +16,11 @@ use crate::expenses::{Expense, DB};
 #[derive(Debug)]
 struct User(String);
 
-impl<'a, 'r> FromRequest<'a, 'r> for User {
+#[rocket::async_trait]
+impl<'a> FromRequest<'a> for User {
     type Error = String;
 
-    fn from_request(request: &'a Request<'r>) -> request::Outcome<Self, Self::Error> {
+    async fn from_request(request: &'a Request<'_>) -> request::Outcome<Self, Self::Error> {
         if let Some(user) = request.headers().get_one("user") {
             request::Outcome::Success(User(user.to_string()))
         } else {
@@ -38,7 +40,7 @@ fn not_found(_: &Request) -> String {
 }
 
 #[get("/expenses/<id>")]
-fn get_expense(oso: State<OsoState>, user: User, id: usize) -> Result<Option<String>, Status> {
+fn get_expense(oso: &State<OsoState>, user: User, id: usize) -> Result<Option<String>, Status> {
     if let Some(expense) = DB.get(&id) {
         if oso.is_allowed(user.0, "GET", expense.clone()) {
             Ok(Some(format!("{}\n", expense)))
@@ -65,7 +67,7 @@ impl OsoState {
 
 pub fn oso() -> Result<Oso, OsoError> {
     let mut oso = Oso::new();
-    
+
     oso.register_class(Expense::get_polar_class())?;
 
     oso.load_file("expenses.polar")?;
@@ -73,19 +75,19 @@ pub fn oso() -> Result<Oso, OsoError> {
     Ok(oso)
 }
 
-pub fn rocket(oso: Oso) -> rocket::Rocket {
+pub fn rocket(oso: Oso) -> Rocket<Build> {
     let oso_state = OsoState {
         oso: Arc::new(Mutex::new(oso)),
     };
 
-    rocket::ignite()
+    rocket::build()
         .mount("/", routes![get_expense])
         .manage(oso_state)
-        .register(catchers![not_authorized, not_found])
+        .register("/", catchers![not_authorized, not_found])
 }
 
-pub fn run() -> Result<(), OsoError> {
-    rocket(oso()?).launch();
+pub async fn run() -> Result<(), OsoError> {
+    rocket(oso()?).launch().await.unwrap();
 
     Ok(())
 }
