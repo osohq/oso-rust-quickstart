@@ -3,9 +3,7 @@ use std::sync::{Arc, Mutex};
 use rocket::get;
 use rocket::http::Status;
 use rocket::request::{self, FromRequest, Request};
-use rocket::State;
-use rocket::Build;
-use rocket::Rocket;
+use rocket::{State, Build, Rocket};
 
 use oso::{
     Oso,
