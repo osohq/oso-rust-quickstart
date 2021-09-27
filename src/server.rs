@@ -3,13 +3,9 @@ use std::sync::{Arc, Mutex};
 use rocket::get;
 use rocket::http::Status;
 use rocket::request::{self, FromRequest, Request};
-use rocket::{State, Build, Rocket};
+use rocket::{Build, Rocket, State};
 
-use oso::{
-    Oso,
-    OsoError,
-    PolarClass
-};
+use oso::{Oso, OsoError, PolarClass};
 
 use crate::expenses::{Expense, DB};
 
@@ -58,7 +54,7 @@ struct OsoState {
 
 impl OsoState {
     pub fn is_allowed(&self, actor: String, action: &str, resource: Expense) -> bool {
-        let mut guard = self.oso.lock().unwrap();
+        let guard = self.oso.lock().unwrap();
         guard
             .is_allowed(actor, action.to_string(), resource)
             .unwrap()
@@ -70,7 +66,7 @@ pub fn oso() -> Result<Oso, OsoError> {
 
     oso.register_class(Expense::get_polar_class())?;
 
-    oso.load_file("expenses.polar")?;
+    oso.load_files(vec!["expenses.polar"])?;
 
     Ok(oso)
 }
@@ -96,11 +92,11 @@ pub async fn run() -> Result<(), OsoError> {
 mod test {
     use super::{oso, rocket};
     use rocket::http::{Header, Status};
-    use rocket::local::Client;
+    use rocket::local::blocking::Client;
 
     #[test]
     fn get_expense_no_rules() {
-        let client = Client::new(rocket(oso().unwrap())).expect("valid rocket instance");
+        let client = Client::tracked(rocket(oso().unwrap())).expect("valid rocket instance");
         let response = client.get("/expenses/1").dispatch();
         assert_eq!(response.status(), Status::Forbidden);
     }
@@ -112,7 +108,7 @@ mod test {
             "allow(actor: String, \"GET\", _expense: Expense) if actor.ends_with(\"@example.com\");",
         )
         .unwrap();
-        let client = Client::new(rocket(oso)).expect("valid rocket instance");
+        let client = Client::tracked(rocket(oso)).expect("valid rocket instance");
         let mut request = client.get("/expenses/1");
         request.add_header(Header::new("user", "alice@example.com"));
         let ok_response = request.dispatch();
@@ -128,7 +124,7 @@ mod test {
             "allow(actor: String, \"GET\", expense: Expense) if expense.submitted_by = actor;",
         )
         .unwrap();
-        let client = Client::new(rocket(oso)).expect("valid rocket instance");
+        let client = Client::tracked(rocket(oso)).expect("valid rocket instance");
         let mut request = client.get("/expenses/1");
         request.add_header(Header::new("user", "alice@example.com"));
         let ok_response = request.dispatch();
