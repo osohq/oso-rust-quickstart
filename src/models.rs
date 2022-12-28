@@ -15,13 +15,26 @@ lazy_static! {
         let mut db = HashMap::with_capacity(3);
         db.insert(
             "larry",
-            User::new(vec![Role::new("admin", Repository::by_name("gmail").unwrap().clone())]),
+            User::new(vec![Role::new(
+                "admin",
+                Repository::by_name("gmail").unwrap(),
+            )]),
         );
 
-        db.insert("anne", User::new(vec![Role::new("maintainer", Repository::by_name("react").unwrap().clone())]));
-        db.insert("graham", User::new(vec![Role::new("contributor", Repository::by_name("oso").unwrap().clone())]));
-        // db.insert("react", Repository::new("react", true));
-        // db.insert("oso", Repository::new("oso".to_owned(), false));
+        db.insert(
+            "anne",
+            User::new(vec![Role::new(
+                "maintainer",
+                Repository::by_name("react").unwrap(),
+            )]),
+        );
+        db.insert(
+            "graham",
+            User::new(vec![Role::new(
+                "contributor",
+                Repository::by_name("oso").unwrap(),
+            )]),
+        );
         db
     };
 }

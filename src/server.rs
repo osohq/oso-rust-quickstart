@@ -60,12 +60,6 @@ pub fn rocket(oso: Oso) -> Rocket<Build> {
         .manage(oso_state)
 }
 
-pub async fn run() -> Result<(), OsoError> {
-    rocket(oso()?).launch().await.unwrap();
-
-    Ok(())
-}
-
 #[cfg(test)]
 mod test {
     use super::{oso, rocket};
