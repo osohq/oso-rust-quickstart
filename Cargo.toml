@@ -8,7 +8,7 @@ edition = "2018"
 
 [dependencies]
 lazy_static = "1.4.0"
-rocket = "0.5.0-rc.1"
-oso = "0.26.0"
-oso-derive = "0.26.0"
-tokio = "1.10.0"
+rocket = "0.5.0-rc.2"
+oso = "0.26.4"
+oso-derive = "0.26.4"
+tokio = "1.23.0"
