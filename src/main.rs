@@ -1,13 +1,7 @@
-#[macro_use]
-extern crate rocket;
-
-mod expenses;
+mod models;
 mod server;
 
-#[tokio::main]
-async fn main() {
-    if let Err(err) = server::run().await {
-        eprintln!("Error: {}", err);
-        std::process::exit(1);
-    }
+#[rocket::launch]
+fn launch() -> _ {
+    server::rocket(server::oso().expect("Valid oso instance"))
 }
