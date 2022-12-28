@@ -43,6 +43,7 @@ lazy_static! {
 pub struct Repository {
     #[polar(attribute)]
     pub name: String,
+    #[polar(attribute)]
     pub is_public: bool,
 }
 
